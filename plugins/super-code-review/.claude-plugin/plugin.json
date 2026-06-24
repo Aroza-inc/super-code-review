@@ -1,7 +1,7 @@
 {
   "name": "super-code-review",
   "description": "4つのサブエージェントを並列実行する包括的コードレビュー（差分・全体・プラン・反復レビュー（自動修正付き））と差分要約。ステージ変更またはPR差分を自動検出。",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": { "name": "Aroza-inc", "url": "https://github.com/Aroza-inc" },
   "homepage": "https://github.com/Aroza-inc/super-code-review",
   "repository": "https://github.com/Aroza-inc/super-code-review",
