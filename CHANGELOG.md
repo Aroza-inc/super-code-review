@@ -23,9 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 基本はインラインコメントではなく通常コメント（`gh pr comment`）
   - 結果をそのまま貼らず、冒頭要約 + 詳細は `<details>` トグルの読みやすい形式に再整形して投稿
 
+## [1.0.1] - 2026-06-24
+
+### Added
+
+- `code-review` / `iterative-review` の出力テンプレート末尾に「要点解説」セクションを追加（ソースコードを把握していない仕様レベルの読み手向けの平易な解説）
+
 ## [1.0.0] - 2026-05-09
 
 Initial public release.
 
 [1.1.0]: https://github.com/Aroza-inc/super-code-review/releases/tag/v1.1.0
+[1.0.1]: https://github.com/Aroza-inc/super-code-review/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Aroza-inc/super-code-review/releases/tag/v1.0.0

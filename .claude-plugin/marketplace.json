@@ -4,7 +4,7 @@
   "plugins": [
     {
       "name": "super-code-review",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "4つのサブエージェントを並列実行する包括的コードレビュー（差分・全体・プラン・反復レビュー（自動修正付き））と差分要約。ステージ変更またはPR差分を自動検出。",
       "category": "code-quality",
       "tags": ["code-review", "review", "quality", "multi-agent", "parallel-review", "diff-summary", "iterative-review"],
