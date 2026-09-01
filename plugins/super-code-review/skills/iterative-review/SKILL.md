@@ -1,7 +1,7 @@
 ---
 name: iterative-review
 description: code-review を実行し、Scope=このPR の指摘がなくなるまで「修正 → 再レビュー」を自動反復する（ユーザー判断が必要な指摘ではループを止めて確認）
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git branch:*), Bash(git fetch:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh api:*), Bash(gh auth status:*), Bash(gh repo view:*), Task, Read, Edit, Write, Glob, Grep, TodoWrite
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git branch:*), Bash(git fetch:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr comment:*), Bash(gh api:*), Bash(gh auth status:*), Bash(gh repo view:*), Task, Read, Edit, Write, Glob, Grep, TodoWrite
 argument-hint: base-branch (optional, auto-detect from PR)
 ---
 
@@ -32,7 +32,7 @@ argument-hint: base-branch (optional, auto-detect from PR)
 ## フロー概要
 
 ```
-Step 1  初期化（モード決定 / ベースブランチ決定 / ユーザー合意）
+Step 1  初期化（モード決定 / ベースブランチ決定 / ユーザー合意（条件付き））
 Step 2  反復ループ（最大 N 回）
         ├─ 2a. code-review の手順でレビュー実行
         ├─ 2b. 終了判定（停止条件を優先順位で評価）
@@ -44,7 +44,7 @@ Step 3  最終出力（ループ結果サマリー）
 
 ## Step 1: 初期化
 
-`code-review/SKILL.md` の「レビュー対象モードの決定」「ベースブランチの決定」「チェックツールの実行」「PRコメントの取得」「ユーザー確認」の各ステップをそのまま実行してください。本スキルでは以下の追加事項のみ加わります。
+`code-review/SKILL.md` の「レビュー対象モードの決定」「ベースブランチの決定」「チェックツールの実行」「PRコメントの取得」「レビュー対象の提示とユーザー確認（条件付き）」の各ステップをそのまま実行してください。本スキルでは以下の追加事項のみ加わります。
 
 ### 1-A. モード制約
 
@@ -59,9 +59,9 @@ Step 3  最終出力（ループ結果サマリー）
 - 反復上限に達した時点で `Scope=このPR` の指摘が残っている場合は、ループを停止して状況をユーザーに提示する（自動修正は中断する）
 - 上限を低く設定すると一部の暴走対策（新規 Must 連続発生による `ABORTED`）が発火しなくなる。詳細は「ループ暴走対策」セクションを参照
 
-### 1-C. ユーザー合意（必須）
+### 1-C. ユーザー合意（条件付き）
 
-レビュー対象・モード・ベースブランチ・対象ファイル一覧に加え、以下を**明示的にユーザーに提示**してから開始してください：
+レビュー対象・モード・ベースブランチ・対象ファイル一覧に加え、以下を**明示的にユーザーに提示**してから開始してください（提示自体は常に必須）：
 
 #### 動作上の合意事項
 
@@ -94,7 +94,14 @@ Step 3  最終出力（ループ結果サマリー）
 
 - `NEEDS_USER_INPUT` で停止した場合、**前回の反復ログとユーザー方針回答は再実行で自動引き継ぎされない**（再実行は1反復目から開始）。ユーザーは方針回答後、必要な手動修正を加えてから `/iterative-review` を再呼び出しする運用となる
 
-ユーザーから明示の OK を得てからループに進んでください。
+**基本は明示の OK を待たず、提示したらそのままループに進んでよい**（本スキルの明示的な呼び出しをもって、自動修正を含む上記合意事項への同意とみなす）。ただし以下のいずれかに該当する場合は、提示後にユーザーから明示の OK を得てからループに進むこと：
+
+1. **モード `staged` の場合**: 「モード `staged` 固有の警告」への明示的合意が必要（1-A の規定どおり）
+2. **対象ファイル一覧に「保護対象パスパターン」該当ファイルが含まれる場合**
+3. **`code-review/SKILL.md` の「レビュー対象の提示とユーザー確認（条件付き）」の確認条件に該当する場合**（対象が確定できない / 差分が極端に大きい 等）
+4. **ユーザーが事前確認を明示的に求めている場合**
+
+なお、ループ中のユーザー確認ゲート（Step 2c）はこの条件付き化の対象外であり、従来どおり必須で機能させること。
 
 ## Step 2: 反復ループ
 
@@ -316,6 +323,7 @@ Step 3  最終出力（ループ結果サマリー）
 - **修正したコードの全文は出さない**: `Edit` ツールでの差分適用結果はツール出力で確認できる前提とし、最終出力の `Fix History` では1行サマリのみ
 - **コードシンボルはバッククォート必須**: `code-review/SKILL.md` の規約を継承
 - **Verdict 用語は流用しない**: `code-review` の `APPROVE / REQUEST_CHANGES` ではなく、本スキル独自の `APPROVED / NEEDS_USER_INPUT / LIMIT_REACHED / ABORTED` を使う
+- **PRコメント投稿**: ユーザーから明示依頼があった場合のみ、`code-review/SKILL.md` の「レビュー結果のPRコメント投稿」ルールに従って投稿する（`#` 不使用 / 基本は通常コメント / `<details>` トグル等で読みやすく再整形）
 
 ## フィードバック対応ガイダンス（受領者向け）
 
