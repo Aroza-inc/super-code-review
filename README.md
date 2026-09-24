@@ -34,13 +34,13 @@ git clone https://github.com/Aroza-inc/super-code-review.git ~/.claude/plugins/m
 
 | スキル | 用途 | 起動するエージェント |
 |---|---|---|
-| `code-review` | 差分レビュー（ステージ変更 or ベースブランチとの diff） | 4並列 |
-| `project-review` | コードベース全体 or 領域指定の包括レビュー | タスクごとに4並列 |
+| `code-review` | 差分レビュー（ステージ変更 or ベースブランチとの diff） | 下記4種から差分に応じて動的に起動（0体〜複数体） |
+| `project-review` | コードベース全体 or 領域指定の包括レビュー | タスクごとに必要な観点を並列 |
 | `plan-review` | 実装着手前のプラン・設計案レビュー | plan-reviewer 単体 |
 | `diff-summary` | 差分の概要・構成・アーキテクチャ影響の要約（指摘なし） | diff-summarizer 単体 |
-| `iterative-review` | `code-review` を内包し、`Scope=このPR` の指摘がなくなるまで「修正→再レビュー」を自動反復 | code-review と同じ4並列を反復ごとに実行 |
+| `iterative-review` | `code-review` を内包し、`Scope=このPR` の指摘がなくなるまで「修正→再レビュー」を自動反復 | code-review と同じ動的起動を反復ごとに実行 |
 
-「4並列」= bug-detector / security-reviewer / consistency-checker / quality-reviewer の同時実行。
+差分レビュー系は bug-detector / security-reviewer / consistency-checker / quality-reviewer の4種を使う。起動数は固定せず、差分の内容（例: ドキュメントのみなら consistency-checker だけ）と量（大きい差分はチャンクに分けて同じ観点を複数体）からオーケストレーターが決め、レビュー前に「起動計画」として提示する。自明な差分ではエージェントを起動せず直接確認することもある。
 
 ## 使い方
 

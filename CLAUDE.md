@@ -31,11 +31,11 @@ plugins/super-code-review/
 
 | スキル | 用途 | 起動するエージェント |
 |---|---|---|
-| `code-review` | 差分レビュー | bug-detector / security-reviewer / consistency-checker / quality-reviewer（4並列） |
-| `project-review` | 全体 or 領域指定レビュー | タスクごとに上記4エージェントを並列実行 |
+| `code-review` | 差分レビュー | bug-detector / security-reviewer / consistency-checker / quality-reviewer から差分の内容・量に応じて動的に起動（0体〜複数体、並列） |
+| `project-review` | 全体 or 領域指定レビュー | タスクごとに上記4種から必要な観点を選んで並列実行 |
 | `plan-review` | 実装前プランレビュー | plan-reviewer（単体） |
 | `diff-summary` | 差分の要約（指摘なし、把握用） | diff-summarizer（単体） |
-| `iterative-review` | 反復修正レビュー（Scope=このPR の指摘がなくなるまで修正→再レビュー） | code-review と同じ4エージェントを反復ごとに並列実行 |
+| `iterative-review` | 反復修正レビュー（Scope=このPR の指摘がなくなるまで修正→再レビュー） | code-review と同じ動的起動を反復ごとに実行 |
 
 ### キーコンセプト
 
@@ -50,8 +50,8 @@ plugins/super-code-review/
 1. レビュー対象モード決定（ステージ変更あり → `staged`、なし → `base-diff`、両方空 → 終了）
 2. ベースブランチ決定（モード `base-diff` のみ：引数 > `gh auth status` > `gh pr view` > エラー案内）
 3. プロジェクトのチェックツール（lint, typecheck等）を可能な範囲で実行
-4. レビュー対象をユーザーに提示（対象が確定できない・差分が極端に大きい等、必要な場合のみ確認を待つ）
-5. 4エージェントを並列実行（各エージェントに diff、ファイル一覧、モード、ベースブランチ名、PRコメント等を渡す）
+4. エージェント起動計画を決定（観点ごとに「起動しない / 1体 / チャンク分割で複数体」）し、レビュー対象と併せてユーザーに提示（対象が確定できない・差分が極端に大きい等、必要な場合のみ確認を待つ）
+5. 起動計画に従いエージェントを並列実行（各エージェントに diff、ファイル一覧、モード、ベースブランチ名、PRコメント等を渡す）
 6. 結果を精査（ベースブランチ起因の除外、コンパイル可能性の検証、Priority・Scope の再判定）
 7. 2軸（Priority=Must/Should/Nit × Scope=このPR/別PR/別タスク）でアクションプランとして出力
 8. ユーザーの明示依頼時のみ、レビュー結果をPRに通常コメントとして投稿（`code-review/SKILL.md` の「レビュー結果のPRコメント投稿」ルール：`#` 不使用・`<details>` 等での再整形）

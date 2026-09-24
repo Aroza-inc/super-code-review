@@ -16,7 +16,7 @@ argument-hint: base-branch (optional, auto-detect from PR)
 | 目的 | 差分の問題点指摘 | コードベース全体の問題点指摘 | 実装前プランのレビュー | **差分の理解・把握** |
 | 入力 | ステージ変更 / ベースブランチ差分 | HEAD のファイル群 | プランテキスト | ステージ変更 / ベースブランチ差分 |
 | 出力 | 修正必須の指摘 | コードベースの全体診断 | プランへの追記提案 | **変更概要・構成・影響範囲** |
-| サブエージェント | 4並列（bug-detector / security-reviewer / consistency-checker / quality-reviewer） | タスクごとに4並列 | 単体（plan-reviewer） | **単体（diff-summarizer）** |
+| サブエージェント | 差分に応じて動的に起動（bug-detector / security-reviewer / consistency-checker / quality-reviewer） | タスクごとに必要な観点を並列 | 単体（plan-reviewer） | **単体（diff-summarizer）** |
 
 **重要**: 本スキルは **指摘・修正提案を出さない**。問題点の検出が必要な場合は `code-review` を使う。
 
