@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-24
+
+### Changed
+
+- サブエージェントの起動数を固定の4並列から動的決定に変更（`code-review` に「エージェント起動計画の決定」を定義し、他スキルが参照）
+  - 観点の選択: 変更ファイルを「コード / 設定・インフラ / ドキュメント / 生成物・lockfile」に分類し、必要な観点のみ起動（例: ドキュメントのみ → `consistency-checker` のみ）。`security-reviewer` は対象外が明白な場合のみ省略
+  - 起動なし: lockfile のみ・空白/タイポ等の自明な差分はオーケストレーターが直接確認
+  - スケールアウト: 1体あたり変更 1,500 行 / 30 ファイル超でチャンク分割し、同じ観点を複数体起動（同時起動は最大 12 体、超過分はバッチ実行）
+  - 判定根拠はファイル・diff のみ（PR本文等の記述では観点を外さない）。LLM プロンプト・スキル定義は「コード」扱い
+  - 起動計画（省略した観点と理由を含む）をレビュー前に提示。ユーザーの明示指示を優先
+  - `iterative-review`: 反復ごとに論理 diff 全体で起動計画を再判定し、反復ログ・最終出力に起動体数を記録
+  - `project-review`: タスクごとに必要な観点のみ起動（量はタスク分割で対応）
+  - 出力: 起動しなかった観点は `SKIPPED（理由）` と表示、チャンク分割した観点は合算
+
 ## [1.1.0] - 2026-09-01
 
 ### Changed
