@@ -2,7 +2,7 @@
 
 Claude Code 用の包括的コードレビュー plugin。
 
-5つのスキル（差分レビュー / プロジェクト全体レビュー / 実装前プランレビュー / 差分サマリー / 反復修正レビュー）と6つの専門サブエージェントを組み合わせ、ソフトウェア開発の各フェーズに応じたレビュー・把握支援を提供します。
+6つのスキル（差分レビュー / プロジェクト全体レビュー / 実装前プランレビュー / 差分サマリー / 反復修正レビュー / PRレビュー＆自動承認）と6つの専門サブエージェントを組み合わせ、ソフトウェア開発の各フェーズに応じたレビュー・把握支援を提供します。
 
 ## インストール
 
@@ -28,7 +28,7 @@ git clone https://github.com/Aroza-inc/super-code-review.git ~/.claude/plugins/m
 ## 前提条件
 
 - [Claude Code](https://claude.ai/code) がインストール済みであること
-- `gh` CLI（GitHub CLI）: **PRベースブランチの自動検出を使う場合のみ**必須。引数でベースブランチを明示指定する場合、または `git add` でステージ変更をレビューする場合は `gh` は不要
+- `gh` CLI（GitHub CLI）: **PRベースブランチの自動検出を使う場合、および `pr-review` を使う場合**に必須。引数でベースブランチを明示指定する場合、または `git add` でステージ変更をレビューする場合は `gh` は不要
 
 ## 提供スキル
 
@@ -39,6 +39,7 @@ git clone https://github.com/Aroza-inc/super-code-review.git ~/.claude/plugins/m
 | `plan-review` | 実装着手前のプラン・設計案レビュー | plan-reviewer 単体 |
 | `diff-summary` | 差分の概要・構成・アーキテクチャ影響の要約（指摘なし） | diff-summarizer 単体 |
 | `iterative-review` | `code-review` を内包し、`Scope=このPR` の指摘がなくなるまで「修正→再レビュー」を自動反復 | code-review と同じ動的起動を反復ごとに実行 |
+| `pr-review` | 他者のPRをローカルに取得して `code-review` を実行し、指摘をPRにコメント。承認条件を満たせば自動 Approve | code-review と同じ動的起動 |
 
 差分レビュー系は bug-detector / security-reviewer / consistency-checker / quality-reviewer の4種を使う。起動数は固定せず、差分の内容（例: ドキュメントのみなら consistency-checker だけ）と量（大きい差分はチャンクに分けて同じ観点を複数体）からオーケストレーターが決め、レビュー前に「起動計画」として提示する。自明な差分ではエージェントを起動せず直接確認することもある。
 
@@ -69,7 +70,15 @@ git add <files>
 
 # 反復修正レビュー（指摘がなくなるまで自動修正→再レビュー）
 /super-code-review:iterative-review
+
+# 他者のPRをレビューしてコメント投稿、問題なければ自動 Approve（ブランチ名 / PR番号 / URL）
+/super-code-review:pr-review feature/foo
+
+# 投稿・Approve せずに結果だけ確認
+/super-code-review:pr-review 123 --dry-run
 ```
+
+`pr-review` は Must 指摘なし・CI 成功などの承認条件をすべて満たす場合のみ Approve し、それ以外はコメント投稿のみで終えます（Request changes は付けません。条件の詳細は `skills/pr-review/SKILL.md` の Step 4）。実行には追跡ファイルに未コミットの変更がない状態が必要で、終了時に元のブランチへ戻ります。PRブランチのスクリプト（lint・テスト・git hooks）はローカルで実行しません。
 
 ## プロジェクト構成
 
@@ -83,6 +92,7 @@ plugins/super-code-review/
     plan-review/SKILL.md           # 実装着手前のプラン
     diff-summary/SKILL.md          # 差分の要約（指摘なし）
     iterative-review/SKILL.md      # 反復修正レビュー
+    pr-review/SKILL.md             # 他者PRのレビュー・コメント投稿・自動承認
   agents/
     bug-detector.md                # 潜在バグ・ロジックエラー検出
     security-reviewer.md           # セキュリティ脆弱性検出（OWASP Top 10）
@@ -94,7 +104,7 @@ plugins/super-code-review/
 
 ## レビュー出力形式
 
-レビュー結果は **Priority（優先度）× Scope（スコープ提案）** の2軸で整理されます（`code-review` / `project-review` / `plan-review` / `iterative-review` の各スキル共通）。`plan-review` のみ Scope を「現プラン内で対応 / 関連 PR で対応 / 別プラン化 or 実装後に code-review で再検証」と読み替えます。
+レビュー結果は **Priority（優先度）× Scope（スコープ提案）** の2軸で整理されます（`code-review` / `project-review` / `plan-review` / `iterative-review` / `pr-review` の各スキル共通）。`plan-review` のみ Scope を「現プラン内で対応 / 関連 PR で対応 / 別プラン化 or 実装後に code-review で再検証」と読み替えます。
 
 ### Priority（優先度）
 
@@ -118,10 +128,10 @@ Overall Verdict は「Priority=Must かつ Scope=このPR」の指摘が1件以�
 
 | エージェント | 役割 | 主に呼ばれるスキル |
 |---|---|---|
-| bug-detector | 潜在バグ・ロジックエラー・エッジケース・型の不整合を検出 | code-review / project-review / iterative-review |
-| security-reviewer | セキュリティ脆弱性（OWASP Top 10）を専門検出 | code-review / project-review / iterative-review |
-| consistency-checker | 既存コードベースのパターン・規約との整合性を検証 | code-review / project-review / iterative-review |
-| quality-reviewer | 可読性・保守性・DRY・パフォーマンスを評価 | code-review / project-review / iterative-review |
+| bug-detector | 潜在バグ・ロジックエラー・エッジケース・型の不整合を検出 | code-review / project-review / iterative-review / pr-review |
+| security-reviewer | セキュリティ脆弱性（OWASP Top 10）を専門検出 | code-review / project-review / iterative-review / pr-review |
+| consistency-checker | 既存コードベースのパターン・規約との整合性を検証 | code-review / project-review / iterative-review / pr-review |
+| quality-reviewer | 可読性・保守性・DRY・パフォーマンスを評価 | code-review / project-review / iterative-review / pr-review |
 | plan-reviewer | 実装プランと既存コードベースの整合性を評価 | plan-review |
 | diff-summarizer | 差分の概要・構成・アーキテクチャ影響を要約（指摘なし） | diff-summary |
 

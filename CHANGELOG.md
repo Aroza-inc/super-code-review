@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-10-15
+
+### Added
+
+- `pr-review` スキル: 他者のPRをブランチ名 / PR番号 / URL で指定し、ローカルに取得して `code-review` を実行、指摘をPRにコメント投稿する。承認条件をすべて満たした場合のみ自動 Approve し、満たさない場合はコメントのみ（Request changes は付けない）
+  - 承認条件: Overall Verdict が `APPROVE` / プロンプトインジェクションの疑いなし / 全エージェント完了 / CI（`gh pr checks`）に失敗・未完了なし（ワークフローがあるのにチェック0件の場合は保留） / ドラフトでも自分のPRでもない / レビュー後にPRの head が更新されていない
+  - 対象PRの特定: ブランチ名に一致するPRが複数あれば番号での再指定を求める。カレントリポジトリ・origin と異なるリポジトリのPRは扱わない
+  - PRは checkout 前にベースと `pull/<番号>/head` を fetch し、SHA を照合してから detached HEAD で取得。終了時に元のブランチへ戻す。追跡ファイルに未コミット変更がある場合は実行しない
+  - PRブランチのスクリプトは実行しない（ローカルのチェックツール実行を省略し CI 結果で代替、checkout 時は `core.hooksPath=/dev/null` で git hooks を、`core.symlinks=false` でシンボリックリンクを無効化し、checkout 中は ref を書き換える git コマンドを使わない）
+  - `gh api` は実行ユーザーの取得（`gh api user`）のみに限定し、PRコメントは `gh pr view --json comments,reviews` で取得
+  - Approve 後にレビューのコミットを確認し、レビュー対象と異なれば警告する
+  - `--dry-run` で投稿・Approve を行わずに結果と承認予定を確認できる
+
 ## [1.2.0] - 2026-09-24
 
 ### Changed
