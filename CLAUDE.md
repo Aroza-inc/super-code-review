@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-Claude Code 用の包括的コードレビュープラグイン。5つのスキル（差分レビュー / プロジェクト全体レビュー / 実装前プランレビュー / 差分サマリー / 反復修正レビュー）と6つの専門サブエージェントを組み合わせ、ソフトウェア開発の各フェーズに応じたレビュー・把握支援を提供する。
+Claude Code 用の包括的コードレビュープラグイン。6つのスキル（差分レビュー / プロジェクト全体レビュー / 実装前プランレビュー / 差分サマリー / 反復修正レビュー / PRレビュー＆自動承認）と6つの専門サブエージェントを組み合わせ、ソフトウェア開発の各フェーズに応じたレビュー・把握支援を提供する。
 
 ## アーキテクチャ
 
@@ -18,6 +18,7 @@ plugins/super-code-review/
     plan-review/SKILL.md           # 実装着手前のプランレビュー
     diff-summary/SKILL.md          # 差分の概要・構成・アーキテクチャ影響の要約（指摘なし）
     iterative-review/SKILL.md      # code-review を内包し、Scope=このPR の指摘がなくなるまで修正→再レビューを反復
+    pr-review/SKILL.md             # code-review を内包し、他者PRをレビューしてコメント投稿、条件を満たせば自動 Approve
   agents/
     bug-detector.md                # 潜在バグ・ロジックエラー検出
     security-reviewer.md           # セキュリティ脆弱性検出（OWASP Top 10）
@@ -36,6 +37,7 @@ plugins/super-code-review/
 | `plan-review` | 実装前プランレビュー | plan-reviewer（単体） |
 | `diff-summary` | 差分の要約（指摘なし、把握用） | diff-summarizer（単体） |
 | `iterative-review` | 反復修正レビュー（Scope=このPR の指摘がなくなるまで修正→再レビュー） | code-review と同じ動的起動を反復ごとに実行 |
+| `pr-review` | 他者PRのレビュー・コメント投稿・自動承認（ブランチ名 / PR番号 / URL を指定） | code-review と同じ動的起動 |
 
 ### キーコンセプト
 
@@ -56,7 +58,7 @@ plugins/super-code-review/
 7. 2軸（Priority=Must/Should/Nit × Scope=このPR/別PR/別タスク）でアクションプランとして出力
 8. ユーザーの明示依頼時のみ、レビュー結果をPRに通常コメントとして投稿（`code-review/SKILL.md` の「レビュー結果のPRコメント投稿」ルール：`#` 不使用・`<details>` 等での再整形）
 
-他スキル（`project-review` / `plan-review` / `iterative-review`）の具体的なフローは各 SKILL.md を参照（`iterative-review` は `code-review` の上位オーケストレーターとして動作）。
+他スキル（`project-review` / `plan-review` / `iterative-review` / `pr-review`）の具体的なフローは各 SKILL.md を参照（`iterative-review` / `pr-review` は `code-review` の上位オーケストレーターとして動作）。
 
 ## プラグイン配布形式
 
