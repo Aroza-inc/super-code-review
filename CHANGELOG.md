@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-06
+
+### Changed
+
+- `pr-review`: CI の結果（`gh pr checks`）を承認条件から外し、参考情報としてコメントと最終出力に記載するように変更
+  - CI が実行されないリポジトリ・PR で承認保留になる問題と、CI の失敗・未完了のたびに再レビューが必要になる問題を解消。マージ前の CI の強制はブランチ保護（Required status checks）に委ねる
+  - CI の状態は「成功 / 失敗あり / 実行中 / チェックなし / 取得失敗」で表示し、失敗ありで承認する場合はコメント冒頭で確認を促す
+  - 承認条件の番号を詰めた（旧条件 5・6 → 4・5）
+
 ## [1.3.0] - 2026-10-15
 
 ### Added
