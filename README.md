@@ -78,7 +78,7 @@ git add <files>
 /super-code-review:pr-review 123 --dry-run
 ```
 
-`pr-review` は Must 指摘なし・CI 成功などの承認条件をすべて満たす場合のみ Approve し、それ以外はコメント投稿のみで終えます（Request changes は付けません。条件の詳細は `skills/pr-review/SKILL.md` の Step 4）。実行には追跡ファイルに未コミットの変更がない状態が必要で、終了時に元のブランチへ戻ります。PRブランチのスクリプト（lint・テスト・git hooks）はローカルで実行しません。
+`pr-review` は Must 指摘なしなどの承認条件をすべて満たす場合のみ Approve し、それ以外はコメント投稿のみで終えます（Request changes は付けません。条件の詳細は `skills/pr-review/SKILL.md` の Step 4）。CI の結果は承認条件に含めず、参考情報としてコメントに記載します（マージ前の CI の強制はブランチ保護に委ねます）。実行には追跡ファイルに未コミットの変更がない状態が必要で、終了時に元のブランチへ戻ります。PRブランチのスクリプト（lint・テスト・git hooks）はローカルで実行しません。
 
 ## プロジェクト構成
 
