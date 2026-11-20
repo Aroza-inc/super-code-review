@@ -211,14 +211,14 @@ Step 5  総括
 （層跨ぎの問題を見つけた場合、それが対象範囲内のコードに起因するものだけを指摘してください）
 
 精査ルール:
-- 既存エージェント定義の「指摘の精査」セクション、および `code-review/SKILL.md` の「指摘の精査 共通ルール」に従うこと
+- 既存エージェント定義の「指摘の精査」セクション、および `code-review/references/review-rules.md`（このスキルのベースディレクトリから見て `../code-review/references/review-rules.md`） の「指摘の精査 共通ルール」に従うこと（このファイルの絶対パスをエージェントに渡す）
 - 共通ルール C（変更前コードとの比較）はモード `full-project` ではスキップする旨が共通ルール側に明記されているのでそれに従う
 - YAGNI チェック（共通ルール F）は引き続き実施すること
 ```
 
 ### 4.3 `full-project` モードでの精査ルールの差分
 
-`code-review/SKILL.md` の「指摘の精査 共通ルール」は `staged` / `base-diff` / `full-project` の全モードに対応している。`full-project` モードでは以下のように動作する（共通ルール側に既記）：
+`code-review/references/review-rules.md` の「指摘の精査 共通ルール」は `staged` / `base-diff` / `full-project` の全モードに対応している。`full-project` モードでは以下のように動作する（共通ルール側に既記）：
 
 - **共通ルール C（変更前コードとの比較）**: ステップ自体をスキップ（ベースブランチ相当が存在しないため）
 - **共通ルール D5（ベースブランチ起因の除外）**: 無効（すべての既存問題が指摘対象）
@@ -412,7 +412,7 @@ Scope Reason: <Scope=別PR/別タスク の場合のみ。`このPR` の場合�
 
 ### 指摘の2軸（Priority × Scope）の定義
 
-Priority / Scope の意味と Scope Reason 必須ルールは `code-review/SKILL.md` の「指摘の2軸（Priority × Scope）の定義」および「指摘の精査 共通ルール」を参照。本スキルは以下の **`full-project` モード固有の読み替え** のみを定義する：
+Priority / Scope の意味と Scope Reason 必須ルールは `code-review/references/review-rules.md`（このスキルのベースディレクトリから見て `../code-review/references/review-rules.md`） の「指摘の2軸（Priority × Scope）の定義」および「指摘の精査 共通ルール」を参照。本スキルは以下の **`full-project` モード固有の読み替え** のみを定義する：
 
 | Scope | `full-project` モードでの読み替え |
 |---|---|

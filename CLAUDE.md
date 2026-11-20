@@ -14,6 +14,10 @@ plugins/super-code-review/
   .claude-plugin/plugin.json       # プラグインメタデータ
   skills/
     code-review/SKILL.md           # 差分レビュー（ステージ変更 or ベースブランチとのdiff）
+    code-review/references/        # code-review から分けた共通ルール（他スキル・エージェントも参照）
+      review-rules.md              # Priority × Scope の定義、指摘の精査 共通ルール A〜G、人の判断が必要な指摘
+      pr-comment.md                # PR コメント投稿ルール
+      feedback-guidance.md         # 受領者向けの対応ガイダンス
     project-review/SKILL.md        # プロジェクト全体 or 領域指定の包括レビュー
     plan-review/SKILL.md           # 実装着手前のプランレビュー
     diff-summary/SKILL.md          # 差分の概要・構成・アーキテクチャ影響の要約（指摘なし）
@@ -45,18 +49,21 @@ plugins/super-code-review/
 - **各エージェントは責務が厳密に分離**: 他エージェントの担当領域は意図的にスキップし、境界を越えるのはその問題が自分の担当領域に直接影響する場合のみ
 - **エージェントのモデル選定**: 全エージェントが `model: opus` を使用
 - **指摘精査プロセスが重要**: サブエージェントの結果をそのまま出力せず、起因判定（diff時）・実装妥当性検証・YAGNIチェック・優先度再判定を行う
+- **共通ルールは `code-review/references/review-rules.md` に集約**: 4エージェントと他スキルはこのファイルを参照する。SKILL.md はコンパクション後に 20,000 文字で切られるため、スキル本体を長くしすぎない
+- **出力は「人が決めること」を中心にする**: 人の判断が必要な指摘（`review-rules.md` の「人の判断が必要な指摘」）だけを詳しく出し、AI で判断・修正できるものは縮める
 - **指摘の評価は2軸（Priority × Scope）で全スキル共通**: `code-review` / `project-review` / `plan-review` および 5エージェント全てが採用。`Priority` = `Must` / `Should` / `Nit`、`Scope` = `このPR` / `別PR` / `別タスク`。`plan-review` (`plan-reviewer`) では Scope を「現プラン内で対応 / 関連 PR で対応 / 別プラン化 or 実装後に code-review で再検証」と読み替える
 
 ### レビューフロー（`code-review` 例）
 
 1. レビュー対象モード決定（ステージ変更あり → `staged`、なし → `base-diff`、両方空 → 終了）
 2. ベースブランチ決定（モード `base-diff` のみ：引数 > `gh auth status` > `gh pr view` > エラー案内）
-3. プロジェクトのチェックツール（lint, typecheck等）を可能な範囲で実行
-4. エージェント起動計画を決定（観点ごとに「起動しない / 1体 / チャンク分割で複数体」）し、レビュー対象と併せてユーザーに提示（対象が確定できない・差分が極端に大きい等、必要な場合のみ確認を待つ）
-5. 起動計画に従いエージェントを並列実行（各エージェントに diff、ファイル一覧、モード、ベースブランチ名、PRコメント等を渡す）
-6. 結果を精査（ベースブランチ起因の除外、コンパイル可能性の検証、Priority・Scope の再判定）
-7. 2軸（Priority=Must/Should/Nit × Scope=このPR/別PR/別タスク）でアクションプランとして出力
-8. ユーザーの明示依頼時のみ、レビュー結果をPRに通常コメントとして投稿（`code-review/SKILL.md` の「レビュー結果のPRコメント投稿」ルール：`#` 不使用・`<details>` 等での再整形）
+3. プロジェクトのチェックツール（lint, typecheck等）を可能な範囲で実行し、結果を記録（出力の「検証」行）
+4. 要件テキストを収集（`--spec` のファイル / PR 本文 / PR 本文からリンクされた GitHub の issue・PR。外部 URL は開かない）
+5. エージェント起動計画を決定（観点ごとに「起動しない / 1体 / チャンク分割で複数体」）し、レビュー対象と併せてユーザーに提示（対象が確定できない・差分が極端に大きい等、必要な場合のみ確認を待つ）
+6. 起動計画に従いエージェントを並列実行（各エージェントに diff、ファイル一覧、モード、ベースブランチ名、PRコメント等を渡す）
+7. 結果を精査（ベースブランチ起因の除外、コンパイル可能性の検証、Priority・Scope の再判定）、要件との照合（Missing / Extra / Misunderstood。オーケストレーターが diff 全体で行う）、人の判断の要否の判定
+8. 出力：詳しく出すのは「確認してほしいこと」（人の判断が必要な指摘）だけ。AI で直せる指摘は1行の表、別タスク候補は1行ずつ。除外した指摘・エージェントごとの内訳・件数の集計表は出さない
+9. ユーザーの明示依頼時のみ、レビュー結果をPRに通常コメントとして投稿（`code-review/references/pr-comment.md`：`#` 不使用・`<details>` 等での再整形）
 
 他スキル（`project-review` / `plan-review` / `iterative-review` / `pr-review`）の具体的なフローは各 SKILL.md を参照（`iterative-review` / `pr-review` は `code-review` の上位オーケストレーターとして動作）。
 

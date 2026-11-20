@@ -52,6 +52,9 @@ git clone https://github.com/Aroza-inc/super-code-review.git ~/.claude/plugins/m
 # 差分レビュー（ベースブランチを明示）
 /super-code-review:code-review main
 
+# 差分レビュー（要件・仕様のファイルと照らし合わせる。PR 本文とリンク先の issue は自動で読む）
+/super-code-review:code-review --spec docs/specs/login.md
+
 # 差分レビュー（ステージされた変更のみ。gh 不要）
 git add <files>
 /super-code-review:code-review
@@ -88,6 +91,7 @@ plugins/super-code-review/
   .claude-plugin/plugin.json       # プラグインメタデータ
   skills/
     code-review/SKILL.md           # 差分レビュー
+    code-review/references/        # 共通ルール・PR コメント投稿ルール等（他スキル・エージェントも参照）
     project-review/SKILL.md        # プロジェクト全体 or 領域指定
     plan-review/SKILL.md           # 実装着手前のプラン
     diff-summary/SKILL.md          # 差分の要約（指摘なし）
@@ -104,13 +108,32 @@ plugins/super-code-review/
 
 ## レビュー出力形式
 
+`code-review` の出力は、毎回すべての指摘を人が読まなくて済むように絞っています。
+
+| 節 | 中身 |
+|---|---|
+| ヘッダ | Verdict、変更の規模、**検証**（lint・テストの結果。すべて成功なら1行）、**要件**（何と照らし合わせたか） |
+| まとめ | 何をする変更か、マージしてよいか、人が決めることが何件あるかを2〜4文で |
+| 確認してほしいこと | 人の判断が必要な指摘だけを詳しく（仕様の解釈、構成から見直すべき変更、破壊的変更など）。選択肢とおすすめを添える |
+| AI で直せる指摘 | 1行ずつの表。「F-3 を直して」のように番号で修正を頼める |
+| 別タスク候補 | このPRの外で対応するものを1行ずつ |
+
+除外した指摘、エージェントごとの内訳、件数の集計表は出しません。
+
+### 要件との照合
+
+PR 本文、PR 本文からリンクされた GitHub の issue / PR（最大5件・1段だけ）、`--spec` で渡したファイルを要件として読み、抜け（Missing）・作りすぎ（Extra）・取り違え（Misunderstood）がないかを確かめます。見つかったものはすべて「確認してほしいこと」に出します。要件が見つからなければ何も出さずに通常のレビューだけを行います。GitHub 以外の URL は開きません。
+
+要件テキストは指摘を増やす根拠にだけ使い、コードから見つかった指摘を減らす根拠には使いません。
+
+
 レビュー結果は **Priority（優先度）× Scope（スコープ提案）** の2軸で整理されます（`code-review` / `project-review` / `plan-review` / `iterative-review` / `pr-review` の各スキル共通）。`plan-review` のみ Scope を「現プラン内で対応 / 関連 PR で対応 / 別プラン化 or 実装後に code-review で再検証」と読み替えます。
 
 ### Priority（優先度）
 
 | Priority | 意味 |
 |---|---|
-| Must | バグ、セキュリティ、クラッシュ、データ破損、規約違反でビルド失敗 |
+| Must | バグ、セキュリティ、クラッシュ、データ破損、要件と実装の食い違い、規約違反でビルド失敗 |
 | Should | 設計の一貫性、アンチパターン、明確なDRY違反、保守性低下、規約違反 |
 | Nit | 命名・微小な可読性、好みの範囲、現状で実害なし |
 
