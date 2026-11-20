@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-11-20
+
+### Added
+
+- `code-review`: 要件との照合
+  - 要件テキストを `--spec <パス>` のファイル、PR 本文、PR 本文からリンクされた GitHub の issue / PR（`gh issue view` / `gh pr view` で読み取りのみ・最大5件・1段だけ）から集める。GitHub 以外の URL は開かず、件数だけを出力する
+  - オーケストレーターが diff 全体と照らし合わせ、Missing / Extra / Misunderstood を Perspective=`Requirements` の指摘として加える（すべて人の判断が必要）
+  - 要件テキストは指摘を増やす根拠にだけ使う。例外として、PR 本文で「この PR ではやらない」と明記された要件は Missing にしない
+  - bug-detector の `Spec-Mismatch` は PR 本文だけでなく要件テキスト全体を対象にした
+- `code-review`: チェックツールの結果を出力の「検証」行に残す（すべて成功なら1行、失敗・未実行はコマンドと理由）
+- `pr-review`: 要件の収集に対応（PR 本文とリンク先の issue / PR）
+
+### Changed
+
+- `code-review`: 出力形式を作り直し、人が決めることを中心にした
+  - 「まとめ」「確認してほしいこと」（人の判断が必要な指摘だけを詳しく、選択肢とおすすめ付き）「AI で直せる指摘」（1行の表）「別タスク候補」（1行ずつ）の構成にした
+  - Review Summary の集計表、Findings Summary / Details の二重掲載、Agent Details、要点解説を廃止（要点解説は「まとめ」と「確認してほしいこと」に統合）
+  - 指摘番号を `F-1` 形式の通し番号にした
+- 「人の判断が必要な指摘」の基準を `iterative-review` から共通ルールに移し、`code-review` の出力の出し分けと `iterative-review` の自動修正の判定で同じ基準を使うようにした
+- `code-review/SKILL.md` から共通ルール（Priority × Scope の定義、指摘の精査 共通ルール A〜G）、PR コメント投稿ルール、受領者向けガイダンスを `code-review/references/` に分けた。コンパクション後に SKILL.md が 20,000 文字で切られる問題を避けるため（17,157 → 約 12,000 文字）
+  - 4エージェントと `project-review` / `iterative-review` / `pr-review` の参照先を更新。オーケストレーターが `references/review-rules.md` の絶対パスをエージェントに渡す
+- PR コメントの再整形ルールを新しい出力形式に合わせた（修正をおすすめする点は直し方を `<details>` に入れる）
+
 ## [1.4.0] - 2026-11-06
 
 ### Changed
