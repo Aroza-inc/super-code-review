@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-11-20
+
+### Changed
+
+- `iterative-review`: 2回目以降のレビューを、直した部分だけを見る確認レビューにした
+  - 1回目は差分全体の全体レビュー。2回目以降は、未解決の指摘ごとに `ADDRESSED` / `NOT_ADDRESSED` を判定し、修正差分で新しく入った問題だけを探す
+  - 修正差分は、修正前に `git stash create` で取ったスナップショットとの差分（作業ツリーは変更しない）。修正で作った新しいファイルは全文を加える
+  - 起動するエージェントは、未解決の指摘を持つ観点と、修正差分に起動計画を当てはめて必要になる観点だけ
+  - 修正差分の外で気づいた点はループを延ばさず記録し、最後の全体レビューに渡す
+  - 未解決の指摘が0件になったら、終了前に全体レビューを1回だけ行う。修正差分が大きい場合（目安 500 行超、または論理 diff の 30% 超）は確認レビューの代わりに全体レビューを行う
+  - 「同じ指摘が直らない」の判定を、ファイル・行番号の近さによる推測から、指摘番号ごとの `NOT_ADDRESSED` の連続回数（2回）に変えた
+  - 確認レビューの指示を `iterative-review/references/confirmation-review.md` に分けた
+- `iterative-review`: 最終出力を `code-review` の新しい形式に合わせた
+  - 「まとめ」「確認してほしいこと」「残っている指摘」「直した内容」「別タスク候補」「次にやること」の構成にし、反復ごとの件数の集計表と要点解説を廃止
+  - ヘッダに検証・要件の行と、全体レビュー・確認レビューの回数を出す
+  - ループ中のユーザー確認も「確認してほしいこと」と同じ形式にした
+- `iterative-review`: `--spec` に対応（`code-review` と同じ）
+
 ## [1.5.0] - 2026-11-20
 
 ### Added

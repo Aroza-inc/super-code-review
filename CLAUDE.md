@@ -22,6 +22,8 @@ plugins/super-code-review/
     plan-review/SKILL.md           # 実装着手前のプランレビュー
     diff-summary/SKILL.md          # 差分の概要・構成・アーキテクチャ影響の要約（指摘なし）
     iterative-review/SKILL.md      # code-review を内包し、Scope=このPR の指摘がなくなるまで修正→再レビューを反復
+    iterative-review/references/
+      confirmation-review.md       # 確認レビューでエージェントに渡す指示
     pr-review/SKILL.md             # code-review を内包し、他者PRをレビューしてコメント投稿、条件を満たせば自動 Approve
   agents/
     bug-detector.md                # 潜在バグ・ロジックエラー検出
@@ -40,7 +42,7 @@ plugins/super-code-review/
 | `project-review` | 全体 or 領域指定レビュー | タスクごとに上記4種から必要な観点を選んで並列実行 |
 | `plan-review` | 実装前プランレビュー | plan-reviewer（単体） |
 | `diff-summary` | 差分の要約（指摘なし、把握用） | diff-summarizer（単体） |
-| `iterative-review` | 反復修正レビュー（Scope=このPR の指摘がなくなるまで修正→再レビュー） | code-review と同じ動的起動を反復ごとに実行 |
+| `iterative-review` | 反復修正レビュー（Scope=このPR の指摘がなくなるまで修正→再レビュー） | 最初と最後は code-review と同じ全体レビュー。その間は、未解決の指摘を持つ観点と修正差分に必要な観点だけで確認レビュー |
 | `pr-review` | 他者PRのレビュー・コメント投稿・自動承認（ブランチ名 / PR番号 / URL を指定） | code-review と同じ動的起動 |
 
 ### キーコンセプト
