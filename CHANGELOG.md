@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-11-20
+
+### Changed
+
+- `project-review`: 出力を `code-review` の形式にそろえた
+  - 「まとめ」「横断パターン」「確認してほしいこと」「AI で直せる指摘」「別タスク候補」「未レビュー範囲」「次にやること」の構成にした
+  - タスク別・観点別の件数の集計表、Action Required、Findings Summary / Details の二重掲載、Task Details（エージェントの報告の全文）を廃止
+  - 統合の手順に「人の判断の要否の判定」を加えた（横断パターンは原則として人の判断が必要）
+  - 番号を `P-1`（横断パターン）と `F-1`（それ以外）にした
+  - Perspective 名の表と受領者向けガイダンスの重複を、共通ルール・`feedback-guidance.md` の参照に置き換えた
+- `plan-review`: 出力を `code-review` の形式にそろえた
+  - 「まとめ」（読み取ったプランの要点を含む）「確認してほしいこと」「プランに足すとよいこと」「別タスク候補」「次にやること」の構成にした
+  - Review Summary、Plan Understanding などの分析表、Action Required、Findings Summary / Details、Agent Details を廃止
+  - 統合の手順に「人の判断の要否の判定」を加えた（未定義の決定事項・方針を変えないと直せない前提の誤り・修正案が複数あるものは人の判断が必要）
+  - 受領者向けガイダンスの重複を `feedback-guidance.md` の参照に置き換えた
+
 ## [1.8.0] - 2026-11-20
 
 ### Security
