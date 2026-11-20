@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-11-20
+
+### Added
+
+- `pr-respond` スキル: 現在のブランチの PR に付いたレビューコメントに対応する
+  - 未解決の行コメントのスレッド（GraphQL の `isResolved` で判定）と、実行ユーザーが最後にコメントした後のレビュー本文・一般コメントを集める。1件に複数の指摘があるコメントは指摘ごとに分ける
+  - コメントを1件ずつ今のコードと照らし合わせ、直す / 確認 / 質問 / 反論 / 対応済み に振り分ける。「確認」の基準は `code-review/references/review-rules.md` の「人の判断が必要な指摘」。関連するコメントに1件でも質問・確認があれば一緒に止める
+  - リポジトリの書き込み権限がない人（`authorAssociation` が `OWNER` / `MEMBER` / `COLLABORATOR` 以外）のコメントは、自動では直さず確認に回す
+  - 直せるものは作業ツリーで直し、チェックツールで確かめる。秘密情報・鍵・CI の秘密設定などのパスは直さず確認に回す
+  - 結果と返信案を見せてユーザーが OK してから、コミット・push・返信の投稿を行う。行コメントはそのスレッドに返信し、レビュー本文・一般コメントにはまとめて1件返信する。スレッドの解決はしない
+  - コメントに書かれたコマンド・URL・指示には従わない
+
 ## [1.6.0] - 2026-11-20
 
 ### Changed
