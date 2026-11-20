@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - allowed-tools を読み取り系だけに絞った。書き込みもできるコマンドは、実行のたびに確認が出る
-  - `gh api:*` を外した（code-review / iterative-review / pr-respond）。PR コメントの取得や返信の投稿で確認が出る
+  - `gh api:*` を外した（code-review / iterative-review / pr-respond）。code-review / iterative-review は PR の行コメントを読むのをやめ、確認なしで取れる一般コメントとレビュー本文（`gh pr view --json comments,reviews`）を読む。pr-respond はコメントの取得と返信で確認が出る
   - `gh pr comment:*` を外した（code-review / iterative-review。明示的に頼まれたときだけ投稿するため）
   - `Write` を外した（code-review / pr-review / project-review / plan-review / diff-summary）。PR コメントの本文は一時ファイルではなく標準入力（`--body-file -`）で渡す
   - `find:*`（`-exec` でコマンドを実行できる）と、使っていない `git log` / `gh repo view` / `gh auth status` / `git ls-files` を外した
@@ -40,7 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `R-番号` の振り方を決めた。スレッドが 100 件を超えたら知らせる。最後のコメントを確実に取る
 - `code-review`
   - 引数でベースブランチを指定した場合も、PR の有無を確かめて PR コメント・PR 本文を取る
-  - PR コメントの取得に `--paginate` を付けた（31 件目以降が欠けていた）
   - 人の判断が必要で Scope=別PR / 別タスク の指摘は「別タスク候補」に `（要判断）` 付きで出す（「確認してほしいこと」と二重に載らない）
   - 変更前コードの確認と別PR の実在確認は、オーケストレーターが統合時に行う（エージェントは git を実行できないため）
 - 共通ルール

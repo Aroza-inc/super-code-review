@@ -163,7 +163,7 @@ Verdict は「Priority=Must かつ Scope=このPR」の指摘が1件以上あれ
 
 各スキルの allowed-tools（確認なしで実行できるコマンド）には、読み取り系のコマンドだけを入れています。次のものは、実行のたびに Claude Code の確認が出ます。
 
-- `gh api`（GitHub への書き込みもできるため。`code-review` の PR コメント取得、`pr-respond` のコメント取得・返信など）
+- `gh api`（GitHub への書き込みもできるため。`pr-respond` のコメント取得・返信。`code-review` はこれを避けるため、PR の行コメントは読まず、一般コメントとレビュー本文だけを読む）
 - `gh pr comment`（`code-review` / `iterative-review` で PR へのコメントを頼んだとき。`pr-review` は投稿が役目なので確認なし）
 - `git add` / `git commit` / `git push`（`pr-respond`）
 
