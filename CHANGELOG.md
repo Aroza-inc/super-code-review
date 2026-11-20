@@ -5,6 +5,66 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-11-20
+
+### Security
+
+- allowed-tools を読み取り系だけに絞った。書き込みもできるコマンドは、実行のたびに確認が出る
+  - `gh api:*` を外した（code-review / iterative-review / pr-respond）。PR コメントの取得や返信の投稿で確認が出る
+  - `gh pr comment:*` を外した（code-review / iterative-review。明示的に頼まれたときだけ投稿するため）
+  - `Write` を外した（code-review / pr-review / project-review / plan-review / diff-summary）。PR コメントの本文は一時ファイルではなく標準入力（`--body-file -`）で渡す
+  - `find:*`（`-exec` でコマンドを実行できる）と、使っていない `git log` / `gh repo view` / `gh auth status` / `git ls-files` を外した
+  - `git fetch:*` を `git fetch origin --:*` に絞った（`--upload-pack` 等のオプションを通さない）
+  - git / gh に手順にないオプション（`--output` 等）を付けないよう明記
+- 方針ドキュメント（CLAUDE.md・README・`.cursor/rules/`・`docs/`）は変更前の版を根拠にする。PR が方針ドキュメントやコードコメントを書き換えて指摘を消す経路を塞ぎ、方針を緩める書き換えは指摘する（共通ルール A-1 / B-1、security-reviewer、code-review、pr-review）
+- 秘密情報の値を出力・PR コメントに書かない（伏字にする）。PR コメントの投稿前に秘密情報らしい文字列を確かめる
+- `pr-review`: プロンプトインジェクションの疑いがある、または本文の秘密情報チェックに引っかかった場合は自動で投稿せず、ユーザーに確認する。作業ツリーの未追跡ファイルの中身をコメントに載せない
+- 保護対象パスを共通ルールに移し、`.git/` と `.claude/` を加えた（iterative-review / pr-respond が参照）
+
+### Fixed
+
+- `iterative-review`
+  - 人の判断が必要な指摘が出たときの動きを1つにした（同じ会話で答えがあれば続ける。止めるよう言われたときだけ `NEEDS_USER_INPUT`）
+  - 反復の修正を開始時点のスナップショットとの差分で見分けるようにした（開始前からあった作業中の変更がレビュー・自動修正に混ざらない）。開始時点に作業中の変更があれば確認を取る。再ステージは `git add -p` を案内
+  - 反復で作った新しいファイルを論理 diff と修正差分に含めた
+  - Requirements の指摘とオーケストレーターが直接出した指摘は、確認レビューでオーケストレーターが判定する
+  - スキップした指摘の扱いを理由ごとに決めた（解決済みにするか、人の判断に回すか）
+  - `--max-iterations <N>` で反復上限を変えられるようにした
+  - 代わりに行う全体レビューは「最後の全体レビュー」に数えない。全体レビュー後は既存の指摘番号を引き継ぐ。最後の全体レビュー後に気づいた差分外の点は最終出力に出す
+  - 用語を「人の判断が必要 / 要らない」にそろえ、重複していた受領者向けガイダンスを「次にやること」にまとめた
+- `iterative-review` 確認レビュー: エージェント定義の出力形式より確認レビューの形式を優先すると明記し、新しい問題に Scope Reason を加えた
+- `pr-respond`
+  - 「最後にコメントした時刻より後」での足切りをやめ、返信に入れた対応済みの印（`<!-- pr-respond done: ... -->`）で除くようにした。「確認」「質問」に回したものが次の実行で消えなくなった
+  - 別リポジトリの PR を指定したら止める。push に失敗したら返信を投稿しない
+  - 直す前にチェックツールを実行して基準を取り、新しく増えた失敗だけを修正の影響として扱う
+  - `R-番号` の振り方を決めた。スレッドが 100 件を超えたら知らせる。最後のコメントを確実に取る
+- `code-review`
+  - 引数でベースブランチを指定した場合も、PR の有無を確かめて PR コメント・PR 本文を取る
+  - PR コメントの取得に `--paginate` を付けた（31 件目以降が欠けていた）
+  - 人の判断が必要で Scope=別PR / 別タスク の指摘は「別タスク候補」に `（要判断）` 付きで出す（「確認してほしいこと」と二重に載らない）
+  - 変更前コードの確認と別PR の実在確認は、オーケストレーターが統合時に行う（エージェントは git を実行できないため）
+- 共通ルール
+  - 要件との食い違いの Priority を出どころで決める（PR 本文 = Must、issue / 仕様ファイルだけ = Should）に統一
+  - 並び順のルールを新しい出力形式に合わせた。残っていた「上記」「下記」の参照を直した。件数行に Scope Reason 空欄の Must を数える
+- `project-review`
+  - ベースブランチ起因の除外の参照番号を D5 から D4 に直した（D5 は有効のまま）
+  - 横断パターンの Must は Verdict 計算上 Scope=このPR として扱う
+  - ディレクトリの集計を `awk` / `sort` なしで行う。1ファイルで閾値を超える場合は単独のタスクにする。大規模警告の確認を二重に取らない
+  - security-reviewer を起動しないタスクでも、プロンプトインジェクションの疑いを記録する。共通ルールのパスを共通入力に加えた
+- `plan-review`: `-` で始まる引数の拒否をファイルパスに限った（Markdown の箇条書きで始まるプランが弾かれていた）。存在しないパスは再指定を求める。Scope の値「別プラン」を `別タスク` に直した。インジェクションの疑いは人の確認に回す
+- `diff-summary`: 大きな差分では diff 全文を渡さない。使っていない許可を外した
+- 事前実行コマンドの `| head -5` を `--shortstat` にした（`head` が allowed-tools になかった）
+- エージェント
+  - 確認レビューなどオーケストレーターが別の出力形式を指示した場合はそちらに従う。full-project モードでの読み替えを明記
+  - プロンプトインジェクションの疑いを書く「注意」節を加えた
+  - security-reviewer: Scope の扱いを共通ルールにそろえた。80% の確信度の閾値は Must だけに適用。OWASP Top 10:2021 の番号であることを明記
+  - consistency-checker: quality-reviewer と重なる SRP / DRY の評価行を、レイヤー責務・再発明の確認に置き換えた
+  - quality-reviewer: Must の定義を共通ルールに合わせた（可読性・保守性は Should）
+  - plan-reviewer: 参照先のない「共通ルール G」を本ファイルの G に直した
+  - diff-summarizer: ブランチ名がない場合は推測しない。構成の雛形でファイルを列挙しない
+  - bug-detector: Category の `Edge Case` を `Edge-Case` にした
+- README: 手動インストールの手順に `/plugin marketplace add` を加えた。gh が必要なスキルに pr-respond を加えた。Priority / Scope の表を正式な定義に合わせ、確認が出るコマンドの説明を加えた
+
 ## [1.7.0] - 2026-11-20
 
 ### Added
