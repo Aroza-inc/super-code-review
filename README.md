@@ -38,7 +38,7 @@ git clone https://github.com/Aroza-inc/super-code-review.git ~/.claude/plugins/m
 | `project-review` | コードベース全体 or 領域指定の包括レビュー | タスクごとに必要な観点を並列 |
 | `plan-review` | 実装着手前のプラン・設計案レビュー | plan-reviewer 単体 |
 | `diff-summary` | 差分の概要・構成・アーキテクチャ影響の要約（指摘なし） | diff-summarizer 単体 |
-| `iterative-review` | `code-review` を内包し、`Scope=このPR` の指摘がなくなるまで「修正→再レビュー」を自動反復 | code-review と同じ動的起動を反復ごとに実行 |
+| `iterative-review` | `code-review` を内包し、`Scope=このPR` の指摘がなくなるまで「修正→再レビュー」を自動反復 | 最初と最後は code-review と同じ全体レビュー。その間は直した部分だけを見る確認レビュー |
 | `pr-review` | 他者のPRをローカルに取得して `code-review` を実行し、指摘をPRにコメント。承認条件を満たせば自動 Approve | code-review と同じ動的起動 |
 
 差分レビュー系は bug-detector / security-reviewer / consistency-checker / quality-reviewer の4種を使う。起動数は固定せず、差分の内容（例: ドキュメントのみなら consistency-checker だけ）と量（大きい差分はチャンクに分けて同じ観点を複数体）からオーケストレーターが決め、レビュー前に「起動計画」として提示する。自明な差分ではエージェントを起動せず直接確認することもある。
@@ -80,6 +80,8 @@ git add <files>
 # 投稿・Approve せずに結果だけ確認
 /super-code-review:pr-review 123 --dry-run
 ```
+
+`iterative-review` は、1回目に差分全体をレビューしたあと、2回目以降は「前の指摘が直ったか」と「直したことで新しく壊れていないか」だけを確かめます（確認レビュー）。指摘がなくなったら、最後に差分全体をもう一度だけレビューしてから終わります。同じ指摘が2回続けて直らない場合は、自動修正をやめて確認を求めます。
 
 `pr-review` は Must 指摘なしなどの承認条件をすべて満たす場合のみ Approve し、それ以外はコメント投稿のみで終えます（Request changes は付けません。条件の詳細は `skills/pr-review/SKILL.md` の Step 4）。CI の結果は承認条件に含めず、参考情報としてコメントに記載します（マージ前の CI の強制はブランチ保護に委ねます）。実行には追跡ファイルに未コミットの変更がない状態が必要で、終了時に元のブランチへ戻ります。PRブランチのスクリプト（lint・テスト・git hooks）はローカルで実行しません。
 
