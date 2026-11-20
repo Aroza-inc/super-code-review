@@ -55,7 +55,8 @@ plugins/super-code-review/
 - **指摘精査プロセスが重要**: サブエージェントの結果をそのまま出力せず、起因判定（diff時）・実装妥当性検証・YAGNIチェック・優先度再判定を行う
 - **共通ルールは `code-review/references/review-rules.md` に集約**: 4エージェントと他スキルはこのファイルを参照する。SKILL.md はコンパクション後に 20,000 文字で切られるため、スキル本体を長くしすぎない
 - **出力は「人が決めること」を中心にする**: 人の判断が必要な指摘（`review-rules.md` の「人の判断が必要な指摘」）だけを詳しく出し、AI で判断・修正できるものは縮める
-- **指摘の評価は2軸（Priority × Scope）で全スキル共通**: `code-review` / `project-review` / `plan-review` および 5エージェント全てが採用。`Priority` = `Must` / `Should` / `Nit`、`Scope` = `このPR` / `別PR` / `別タスク`。`plan-review` (`plan-reviewer`) では Scope を「現プラン内で対応 / 関連 PR で対応 / 別プラン化 or 実装後に code-review で再検証」と読み替える
+- **allowed-tools には読み取り系だけを入れる**: 書き込みもできるコマンド（`gh api`・`gh pr comment`（`pr-review` を除く）・`git commit` / `git push` 等）と、引数で書き込みやコマンド実行ができるもの（`find`、オプションを絞らない `git fetch` 等）は入れない。レビュー対象の diff・PR 本文・コメントは誰でも書けるため、インジェクションが通っても確認なしで書き込みまで進まないようにする
+- **指摘の評価は2軸（Priority × Scope）で全スキル共通**: diff-summary / pr-respond 以外の全スキルと、diff-summarizer 以外の全エージェントが採用。`Priority` = `Must` / `Should` / `Nit`、`Scope` = `このPR` / `別PR` / `別タスク`。`plan-review` (`plan-reviewer`) では Scope を「現プラン内で対応 / 関連 PR で対応 / 別プラン化 or 実装後に code-review で再検証」と読み替える
 
 ### レビューフロー（`code-review` 例）
 
@@ -69,11 +70,11 @@ plugins/super-code-review/
 8. 出力：詳しく出すのは「確認してほしいこと」（人の判断が必要な指摘）だけ。AI で直せる指摘は1行の表、別タスク候補は1行ずつ。除外した指摘・エージェントごとの内訳・件数の集計表は出さない
 9. ユーザーの明示依頼時のみ、レビュー結果をPRに通常コメントとして投稿（`code-review/references/pr-comment.md`：`#` 不使用・`<details>` 等での再整形）
 
-他スキル（`project-review` / `plan-review` / `iterative-review` / `pr-review`）の具体的なフローは各 SKILL.md を参照（`iterative-review` / `pr-review` は `code-review` の上位オーケストレーターとして動作）。
+その他のスキルの具体的なフローは各 SKILL.md を参照（`iterative-review` / `pr-review` は `code-review` の上位オーケストレーターとして動作）。
 
 ## プラグイン配布形式
 
-Claude Code Marketplace プラグインとして配布。`marketplace.json` でオーナー・プラグイン一覧を定義し、`plugin.json` で個別プラグインのメタデータを管理する。
+Claude Code Marketplace プラグインとして配布。`marketplace.json` でオーナー・プラグイン一覧を定義し、`plugin.json` で個別プラグインのメタデータを管理する。リリース時は両方の `version` を同じ値に更新する。
 
 ## 言語
 

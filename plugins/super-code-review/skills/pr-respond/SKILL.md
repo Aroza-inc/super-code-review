@@ -1,7 +1,7 @@
 ---
 name: pr-respond
 description: 現在のブランチのPRに付いたレビューコメント（行コメント・レビュー本文・一般コメント）を1件ずつ確かめ、直せるものは直し、誤っているものは根拠を添えて反論し、各スレッドに返信する。コミット・push・返信の投稿はユーザーの確認後に行う
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git fetch:*), Bash(gh pr view:*), Bash(gh issue view:*), Bash(gh api:*), Bash(gh auth status:*), Bash(gh repo view:*), Read, Edit, Write, Glob, Grep, TodoWrite
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(gh api user:*), Bash(gh auth status:*), Bash(gh repo view:*), Read, Edit, Write, Glob, Grep, TodoWrite
 argument-hint: [PR number or URL] (optional, default: PR of the current branch)
 ---
 
@@ -16,6 +16,8 @@ argument-hint: [PR number or URL] (optional, default: PR of the current branch)
 | 立場 | 他者の PR をレビューする側 | 自分の PR に付いたレビューを受けて対応する側 |
 | コードの変更 | しない | 直せる指摘は作業ツリーで直す |
 | PR への書き込み | コメント・Approve | 各スレッドへの返信（ユーザーの確認後） |
+
+**確認なしで実行できる範囲**: コメントの GraphQL 取得、返信の投稿（`gh api`）、`git add` / `git commit` / `git push` は、あえて allowed-tools に入れていません。`gh api` は書き込みもできるコマンドで、このスキルは誰でも書けるコメントを読むため、実行のたびにユーザーの確認が出るようにしています。
 
 ## コンテキスト情報
 
@@ -39,9 +41,10 @@ Step 5  確認後: コミット・push・返信の投稿
 1. `gh auth status` で認証を確認する。未認証なら「`gh auth login` を実行してください」と案内して終了
 2. 引数があればその PR、なければ現在のブランチの PR を `gh pr view [<対象>] --json number,url,title,state,headRefName,headRefOid,author` で取得する。見つからなければ案内して終了。`-` から始まる引数は拒否する
 3. `state` が `OPEN` 以外なら案内して終了
-4. **現在のブランチが PR の `headRefName` と一致すること**を確認する。一致しない場合は「PR のブランチ <headRefName> に切り替えてから実行してください」と案内して終了する（本スキルはブランチを切り替えない）
-5. `git rev-parse HEAD` が `headRefOid` と一致しない場合（ローカルが古い / push していないコミットがある）は、その旨を提示する。コメントの行番号がずれている可能性があるため、続けるかをユーザーに確認する
-6. `gh api user -q .login` で実行ユーザーを取得する
+4. **リポジトリの照合**: `url`（`https://github.com/<owner>/<repo>/pull/<番号>`）の `<owner>/<repo>` が `gh repo view --json nameWithOwner -q .nameWithOwner` と一致しない場合は「カレントリポジトリと異なるリポジトリの PR です」と案内して終了する（大文字小文字は区別しない）
+5. **現在のブランチが PR の `headRefName` と一致すること**を確認する。一致しない場合は「PR のブランチ <headRefName> に切り替えてから実行してください」と案内して終了する（本スキルはブランチを切り替えない）
+6. `git rev-parse HEAD` が `headRefOid` と一致しない場合（ローカルが古い / push していないコミットがある）は、その旨を提示する。コメントの行番号がずれている可能性があるため、続けるかをユーザーに確認する
+7. `gh api user -q .login` で実行ユーザーを取得する
 
 ### 1-B. コメントの収集
 
@@ -55,9 +58,11 @@ query($owner:String!,$repo:String!,$number:Int!){
   repository(owner:$owner,name:$repo){
     pullRequest(number:$number){
       reviewThreads(first:100){
+        pageInfo{ hasNextPage }
         nodes{
           isResolved isOutdated path line
           comments(first:50){ nodes{ databaseId author{login} authorAssociation body createdAt } }
+          last: comments(last:1){ nodes{ author{login} } }
         }
       }
     }
@@ -66,13 +71,15 @@ query($owner:String!,$repo:String!,$number:Int!){
 ```
 
 - `isResolved=true` のスレッドは対象外
-- 最後のコメントが実行ユーザーのスレッドは対象外（返信済みのため）
+- 最後のコメント（`last`）が実行ユーザーのスレッドは対象外（返信済みのため）
+- `pageInfo.hasNextPage` が true（スレッドが 100 件を超える）場合は、101 件目以降を見ていないことを Step 4 の出力に書く
 - `isOutdated=true`（コードが変わって行がずれた）のスレッドも対象にするが、評価のときに現在のコードで確かめ直す
 
 2. **レビュー本文**と 3. **一般コメント**: `gh pr view <PR番号> --json reviews,comments` で取る
    - 本文が空のレビュー（Approve だけ等）は対象外
-   - 実行ユーザーが最後にコメントした時刻より**後**のものだけを対象にする（一般コメントは `createdAt`、レビューは `submittedAt` で比べる）（それ以前のものは対応済みとみなす）。実行ユーザーのコメントがまだなければ全件
+   - 実行ユーザー自身のレビュー・コメントは対象外
    - 1件のコメントに複数の指摘がある場合（例: `pr-review` が投稿した `F-1`, `F-2` … のコメント）は、指摘ごとに分ける
+   - **対応済みの印で除く**: 実行ユーザーの過去のコメントにある `<!-- pr-respond done: ... -->` の印を読み、そこに並んだ ID（レビュー・コメントの `id`。指摘ごとに分けたものは `<id>:F-2` の形）を対象から外す。印にないものは、古くても対象に残す（「確認」「質問」に回したまま答えが出ていないものを落とさないため）。印は Step 5 で付ける
 
 **収集件数が 0 件なら**「対応が必要なコメントはありません」と伝えて終了します。
 
@@ -115,8 +122,9 @@ query($owner:String!,$repo:String!,$number:Int!){
 
 1. 直す順番: 壊れている・セキュリティ → 簡単なもの（タイポ・import 等） → 大きなもの（ロジック・リファクタ）
 2. `Edit` / `Write` で作業ツリーを直す。**コミット・push はまだしない**
-3. 次のファイルは、指摘されていても直さずに「確認」に回す: `.env*`、`secrets/` / `credentials/` を含むパス、鍵・証明書（`.pem` / `.key` 等）、リポジトリ外のパス、CI 設定の秘密情報に触れる行（`iterative-review` の「保護対象パスパターン」と同じ考え方）
-4. 直し終えたら、`code-review/SKILL.md` の「チェックツールの実行」と同じ方法でチェックツールを実行し、結果を記録する。失敗した場合は、原因になった修正を1回だけ直し直す。それでも失敗するなら、その修正を元に戻して「確認」に回す
+3. `review-rules.md` の「保護対象パスパターン」に当たるファイルは、指摘されていても直さずに「確認」に回す
+4. **直す前に**、`code-review/SKILL.md` の「チェックツールの実行」と同じ方法でチェックツールを1回実行し、結果を基準として記録する（もともと失敗しているものを、修正のせいにしないため）
+5. 直し終えたら、もう一度チェックツールを実行する。基準より**新しく増えた失敗**だけを修正の影響として扱う。新しい失敗があれば、原因になった修正を1回だけ直し直す。それでも失敗するなら、その修正を元に戻して「確認」に回す
 
 ## Step 4: 結果と返信案の提示
 
@@ -155,6 +163,8 @@ PR: <番号> <タイトル> @ <HEAD の SHA 先頭7桁>
 「直したものをコミットして push し、上の返信を投稿してよいですか？」と聞く。確認してほしいことがある場合は、その答えも一緒に求める。
 ```
 
+**番号の振り方**: 1-B で指摘ごとに分けた単位に、収集した順で `R-1` から通しで番号を振る。「確認してほしいこと」「直したもの」「返信案」のどこに出しても同じ番号を使う（ユーザーが「R-4 の返信を変えて」と指示できるようにするため）。
+
 ### 返信の書き方
 
 - **コメントと同じ言語で書く**
@@ -169,12 +179,12 @@ PR: <番号> <タイトル> @ <HEAD の SHA 先頭7桁>
 ユーザーが OK した範囲だけを実行します。「確認してほしいこと」に答えがあった場合は、その方針で直してから（Step 3 と同じ手順でチェックツールまで）進みます。
 
 1. **コミット**: 直したファイルだけを `git add` し、対応したコメントが分かるメッセージでコミットする（リポジトリのコミットメッセージの書き方に合わせる）
-2. **push**: `git push`（PR のブランチへ）
+2. **push**: `git push`（PR のブランチへ）。**push が失敗したら（リモートが先に進んでいる等）、返信は投稿せずに止める**。`git fetch` と rebase / merge が必要なことをユーザーに伝える（返信に書くコミットがリモートにない状態を作らないため）
 3. **返信の投稿**
    - 行コメントのスレッド: そのスレッドの最初のコメントの `databaseId` に返信する
-     `gh api repos/<owner>/<repo>/pulls/<PR番号>/comments/<databaseId>/replies -F body=@<一時ファイル>`
-   - レビュー本文・一般コメント: 対応をまとめた一般コメントを1件投稿する（`gh api repos/<owner>/<repo>/issues/<PR番号>/comments -F body=@<一時ファイル>`）。どのコメントへの返事かが分かるように、元のコメントの要約や `F-番号` を添える
-   - 本文は一時ファイルに書き出してから渡す（シェルのエスケープ事故を防ぐため）
+     `gh api repos/<owner>/<repo>/pulls/<PR番号>/comments/<databaseId>/replies -F body=@-`（本文は標準入力から渡す）
+   - レビュー本文・一般コメント: 対応をまとめた一般コメントを1件投稿する（`gh api repos/<owner>/<repo>/issues/<PR番号>/comments -F body=@-`）。どのコメントへの返事かが分かるように、元のコメントの要約や `F-番号` を添える。**本文の末尾に対応済みの印** `<!-- pr-respond done: <id>,<id>:F-2 -->` を入れる。印に入れるのは「直した」「反論」「対応済み」にしたものだけで、「確認」「質問」にしたものは入れない（次の実行でも対象に残すため）
+   - 本文は引用符付きのヒアドキュメントで標準入力から渡す（ファイルを書き出さず、シェルのエスケープ事故も防ぐため。`code-review/references/pr-comment.md` の手順4と同じ）
    - コメント本文で `#` + 数字を使わない（他の issue / PR へのリンクになるため。`code-review/references/pr-comment.md` と同じ）
 4. **スレッドの解決（resolve）はしない**: 解決するかはレビューした人が決める
 5. 最後に、コミットの SHA、push 先、投稿した返信の URL を報告する

@@ -73,7 +73,7 @@ color: pink
 ```
 ## plan-reviewer: Implementation Plan Review Details
 
-Verdict: PASS | FAIL  （Priority=Must かつ Scope=このPR が1件以上 → FAIL、それ以外 → PASS。共通ルール G に従う）
+Verdict: PASS | FAIL  （Priority=Must かつ Scope=このPR が1件以上 → FAIL、それ以外 → PASS。本ファイル「指摘の精査」G に従う）
 Must (このPR): X / Should (このPR): X / Nit (このPR): X / Out-of-scope: X  （Out-of-scope = Scope が `別PR` または `別タスク` の合算）
 
 ### Plan Understanding

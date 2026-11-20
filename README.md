@@ -18,17 +18,18 @@ Claude Code 用の包括的コードレビュー plugin。
 ネットワーク制約・社内ミラー利用・特定リビジョン固定など、マーケットプレイス経由での取得が使えない環境向け。リポジトリを任意の場所にクローンし、ローカルパスを marketplace として登録します。
 
 ```bash
-git clone https://github.com/Aroza-inc/super-code-review.git ~/.claude/plugins/marketplaces/super-code-review
+git clone https://github.com/Aroza-inc/super-code-review.git ~/src/super-code-review
 ```
 
 ```
+/plugin marketplace add ~/src/super-code-review
 /plugin install super-code-review@super-code-review
 ```
 
 ## 前提条件
 
 - [Claude Code](https://claude.ai/code) がインストール済みであること
-- `gh` CLI（GitHub CLI）: **PRベースブランチの自動検出を使う場合、および `pr-review` を使う場合**に必須。引数でベースブランチを明示指定する場合、または `git add` でステージ変更をレビューする場合は `gh` は不要
+- `gh` CLI（GitHub CLI）: **PRベースブランチの自動検出を使う場合、および `pr-review` / `pr-respond` を使う場合**に必須（`code-review` が PR 本文・リンク先の issue を要件として読むときにも使う）。引数でベースブランチを明示指定する場合、または `git add` でステージ変更をレビューする場合は `gh` は不要
 
 ## 提供スキル
 
@@ -104,6 +105,7 @@ plugins/super-code-review/
     plan-review/SKILL.md           # 実装着手前のプラン
     diff-summary/SKILL.md          # 差分の要約（指摘なし）
     iterative-review/SKILL.md      # 反復修正レビュー
+    iterative-review/references/   # 確認レビューの指示
     pr-review/SKILL.md             # 他者PRのレビュー・コメント投稿・自動承認
     pr-respond/SKILL.md            # 自分のPRへのレビュー対応
   agents/
@@ -135,26 +137,37 @@ PR 本文、PR 本文からリンクされた GitHub の issue / PR（最大5件
 
 要件テキストは指摘を増やす根拠にだけ使い、コードから見つかった指摘を減らす根拠には使いません。
 
+### 指摘の評価（Priority × Scope）
 
-レビュー結果は **Priority（優先度）× Scope（スコープ提案）** の2軸で整理されます（`code-review` / `project-review` / `plan-review` / `iterative-review` / `pr-review` の各スキル共通）。`plan-review` のみ Scope を「現プラン内で対応 / 関連 PR で対応 / 別プラン化 or 実装後に code-review で再検証」と読み替えます。
+レビュー結果は **Priority（優先度）× Scope（スコープ提案）** の2軸で整理されます（`code-review` / `project-review` / `plan-review` / `iterative-review` / `pr-review` の各スキル共通）。`plan-review` のみ Scope を「現プラン内で対応 / 関連 PR で対応 / 別プラン化 or 実装後に code-review で再検証」と読み替えます。下の表は要約で、正式な定義は `plugins/super-code-review/skills/code-review/references/review-rules.md` にあります。
 
-### Priority（優先度）
+#### Priority（優先度）
 
 | Priority | 意味 |
 |---|---|
-| Must | バグ、セキュリティ、クラッシュ、データ破損、要件と実装の食い違い、規約違反でビルド失敗 |
+| Must | バグ、セキュリティ、クラッシュ、データ破損、PR本文と実装の食い違い、型の不整合、規約違反でビルド失敗 |
 | Should | 設計の一貫性、アンチパターン、明確なDRY違反、保守性低下、規約違反 |
 | Nit | 命名・微小な可読性、好みの範囲、現状で実害なし |
 
-### Scope（スコープ提案）
+#### Scope（スコープ提案）
 
 | Scope | 意味 |
 |---|---|
 | このPR | 当該diffに閉じて修正でき、副作用が小さい |
-| 別PR | 既に進行中／予定されている関連PRがある |
-| 別タスク | アプリ全体に波及（命名・a11y・共通基盤の統一等）、後続チケットの方が効率的 |
+| 別PR | 既に進行中／予定されている関連PRがある（実在する PR 番号が必要） |
+| 別タスク | アプリ全体に波及（命名・a11y・共通基盤の統一等）、YAGNI、後続チケットの方が効率的 |
 
-Overall Verdict は「Priority=Must かつ Scope=このPR」の指摘が1件以上あれば `REQUEST_CHANGES`、それ以外は `APPROVE`。Scope=`別PR` / `別タスク` には Scope Reason を必須で記載します（`iterative-review` の最終ステータスは `APPROVED / NEEDS_USER_INPUT / LIMIT_REACHED / ABORTED` の独自用語）。
+Verdict は「Priority=Must かつ Scope=このPR」の指摘が1件以上あれば `REQUEST_CHANGES`、それ以外は `APPROVE`。Scope=`別PR` / `別タスク` には Scope Reason を必須で記載します（`iterative-review` の最終ステータスは `APPROVED / NEEDS_USER_INPUT / LIMIT_REACHED / ABORTED` の独自用語）。
+
+## 確認が出るコマンド
+
+各スキルの allowed-tools（確認なしで実行できるコマンド）には、読み取り系のコマンドだけを入れています。次のものは、実行のたびに Claude Code の確認が出ます。
+
+- `gh api`（GitHub への書き込みもできるため。`pr-respond` のコメント取得・返信。`code-review` はこれを避けるため、PR の行コメントは読まず、一般コメントとレビュー本文だけを読む）
+- `gh pr comment`（`code-review` / `iterative-review` で PR へのコメントを頼んだとき。`pr-review` は投稿が役目なので確認なし）
+- `git add` / `git commit` / `git push`（`pr-respond`）
+
+レビュー対象の diff・PR 本文・コメントは誰でも書けるため、そこに仕込まれた指示に AI が従ってしまっても、確認なしで書き込みまで進まないようにしています。
 
 ## サブエージェント
 
